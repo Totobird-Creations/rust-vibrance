@@ -10,24 +10,51 @@ use crate::consts::{
 };
 
 
+/// An object representing pieces of text and formatting for each part.
+///
+/// # Examples
+///
+/// Direct usage.
+/// ```
+/// use coloured::ColouredString;
+/// use coloured::consts::Formatting;
+/// let a = ColouredString::new();
+/// let b = ColouredString::from("foo");
+/// let c = ColouredString::from_formatting("bar", Formatting::FgRed);
+/// ```
+///
+/// Shorthand usage.
+/// ```
+/// use coloured::fg;
+/// let a = fg::red("bar");
+/// ```
+///
+/// # Aliases
+///
+/// Disable feature `us` to use `ColouredString` name.
+/// Enable feature `us` to use `ColoredString` alias.
 #[derive(Debug)]
 pub struct ColouredString {
     pub(crate) parts      : Vec<ColouredStringPart>,
     pub(crate) formatting : Vec<Formatting>
 }
+///
 impl ColouredString {
+    /// Create a new empty, unformatted, `ColouredString`.
     pub fn new() -> ColouredString {
         return ColouredString {
             parts      : Vec::new(),
             formatting : Vec::new()
         };
     }
+    /// Create a new unformatted `ColouredString` containing some text.
     pub fn from<S : Into<String>>(text : S) -> ColouredString {
         return ColouredString {
             parts      : vec![ColouredStringPart::String(text.into())],
             formatting : Vec::new()
         }
     }
+    /// create a new `ColouredString` containing some text and formatting.
     pub(crate) fn from_formatting<S : Into<String>>(text : S, formatting : Vec<Formatting>) -> ColouredString {
         return ColouredString {
             parts      : vec![ColouredStringPart::String(text.into())],
