@@ -1,73 +1,61 @@
-use std::fmt::{Debug, Display, Formatter, Result};
-use std::collections::HashSet;
+use std::fmt::{
+    Display,
+    Formatter,
+    Result
+};
 
-use crate::enums::{Colour, Style, Font};
+use crate::consts::{
+    Formatting,
+    FORMAT_RESET
+};
 
 
-#[derive(Clone)]
-pub struct FormattedString<'l> {
-    text       : &'l str,
-    foreground : Colour,
-    background : Colour,
-    style      : HashSet<Style>,
-    font       : Font,
-    next       : Option<Box<FormattedString<'l>>>
+#[derive(Debug)]
+pub struct ColouredString {
+    pub(crate) parts      : Vec<ColouredStringPart>,
+    pub(crate) formatting : Vec<Formatting>
 }
-
-impl<'l> FormattedString<'l> {
-    pub fn from<S : Into<&'l str>>(text : S) -> FormattedString<'l> {
-        return FormattedString {
-            text       : text.into(),
-            foreground : Colour::None,
-            background : Colour::None,
-            style      : HashSet::new(),
-            font       : Font::Primary,
-            next       : None
+impl ColouredString {
+    pub(crate) fn new() -> ColouredString {
+        return ColouredString {
+            parts      : Vec::new(),
+            formatting : Vec::new()
+        };
+    }
+    pub(crate) fn from<S : Into<String>>(text : S, formatting : Vec<Formatting>) -> ColouredString {
+        return ColouredString {
+            parts      : vec![ColouredStringPart::String(text.into())],
+            formatting : formatting
         };
     }
 }
 
-impl<'l> FormattedString<'l> {
-    pub fn set_foreground(mut self, colour : Colour) -> FormattedString<'l> {
-        self.foreground = colour;
-        return self;
-    }
-    pub fn set_background(mut self, colour : Colour) -> FormattedString<'l> {
-        self.background = colour;
-        return self;
-    }
-    pub fn add_style(mut self, style : Style) -> FormattedString<'l> {
-        self.style.insert(style);
-        return self;
-    }
-    pub fn set_font(mut self, font : Font) -> FormattedString<'l> {
-        self.font = font;
-        return self;
+impl Display for ColouredString {
+    fn fmt(&self, f : &mut Formatter<'_>) -> Result {
+        let mut text = String::new();
+        for part in &self.parts {
+            text += format!("{}{}{}",
+                self.formatting.iter().map(|f| format!("{}", f)).collect::<Vec<String>>().join(""),
+                part,
+                FORMAT_RESET
+            ).as_str();
+        }
+        return write!(f, "{}", text);
     }
 }
 
-impl Debug for FormattedString<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        return write!(f,
-            "{}{}",
-            self.text,
-            match (&self.next) {
-                Some(next) => format!("{:?}", next),
-                None       => String::new()
-            }
-        );
-    }
+
+#[derive(Debug)]
+pub(crate) enum ColouredStringPart {
+    String(String),
+    Sub(Box<ColouredString>)
 }
 
-impl Display for FormattedString<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        return write!(f,
-            "{}{}",
-            self.text,
-            match (&self.next) {
-                Some(next) => format!("\x{:?}", next),
-                None       => String::new()
-            }
-        );
+impl Display for ColouredStringPart {
+    fn fmt(&self, f : &mut Formatter<'_>) -> Result {
+        return write!(f, "{}", match (self) {
+            ColouredStringPart::String(string) => String::from(string),
+            ColouredStringPart::Sub(string)    => format!("{}", string)
+        });
     }
 }
