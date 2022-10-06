@@ -1,4 +1,7 @@
-use std::ops::Add;
+use std::ops::{
+    Add,
+    AddAssign
+};
 
 use crate::{
     traits::Colourisable,
@@ -12,7 +15,7 @@ use crate::{
 
 impl Colourisable for &str {
     fn formatted(self, formatting : Vec<Formatting>) -> ColouredString {
-        return ColouredString::from(self, formatting);
+        return ColouredString::from_formatting(self, formatting);
     }
 }
 impl Add<ColouredString> for &str {
@@ -29,7 +32,7 @@ impl Add<ColouredString> for &str {
 
 impl Colourisable for String {
     fn formatted(self, formatting : Vec<Formatting>) -> ColouredString {
-        return ColouredString::from(self, formatting);
+        return ColouredString::from_formatting(self, formatting);
     }
 }
 impl Add<ColouredString> for String {
@@ -43,6 +46,16 @@ impl Add<ColouredString> for String {
         return string;
     }
 }
+impl Into<String> for ColouredString {
+    fn into(self) -> String {
+        return self.parts.iter().map(|part| part.to_string()).collect::<Vec<String>>().join("");
+    }
+}
+impl From<String> for ColouredString {
+    fn from(string : String) -> Self {
+        return string.formatted(Vec::new());
+    }
+}
 
 impl Colourisable for ColouredString {
     fn formatted(mut self, mut formatting : Vec<Formatting>) -> ColouredString {
@@ -51,7 +64,6 @@ impl Colourisable for ColouredString {
         return self;
     }
 }
-
 impl<S : Colourisable> Add<S> for ColouredString {
     type Output = ColouredString;
     fn add(self, other : S) -> Self::Output {
@@ -61,5 +73,12 @@ impl<S : Colourisable> Add<S> for ColouredString {
             ColouredStringPart::Sub(Box::new(other.formatted(Vec::new())))
         ];
         return string;
+    }
+}
+impl<S : Colourisable> AddAssign<S> for ColouredString {
+    fn add_assign(&mut self, other : S) {
+        self.parts.push(
+            ColouredStringPart::Sub(Box::new(other.formatted(Vec::new())))
+        );
     }
 }
