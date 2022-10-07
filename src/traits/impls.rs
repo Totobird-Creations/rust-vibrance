@@ -29,6 +29,11 @@ impl Add<ColouredString> for &str {
         return string;
     }
 }
+impl From<&str> for ColouredString {
+    fn from(string : &str) -> Self {
+        return string.formatted(Vec::new());
+    }
+}
 
 impl Colourisable for String {
     fn formatted(self, formatting : Vec<Formatting>) -> ColouredString {
