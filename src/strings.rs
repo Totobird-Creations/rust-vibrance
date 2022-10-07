@@ -38,7 +38,8 @@ pub struct ColouredString {
     pub(crate) parts      : Vec<ColouredStringPart>,
     pub(crate) formatting : Vec<Formatting>
 }
-///
+
+/// Initialisation
 impl ColouredString {
     /// Create a new empty, unformatted, `ColouredString`.
     pub fn new() -> ColouredString {
@@ -54,7 +55,7 @@ impl ColouredString {
             formatting : Vec::new()
         }
     }
-    /// create a new `ColouredString` containing some text and formatting.
+    /// Create a new `ColouredString` containing some text and formatting.
     pub(crate) fn from_formatting<S : Into<String>>(text : S, formatting : Vec<Formatting>) -> ColouredString {
         return ColouredString {
             parts      : vec![ColouredStringPart::String(text.into())],
@@ -62,35 +63,102 @@ impl ColouredString {
         };
     }
 }
+
+/// Mutation and Getters
 impl ColouredString {
-    pub fn push_string(&mut self, string : String) {
-        *self += string;
+
+    pub fn to_string(&self) -> String {
+        return self.parts.iter().map(|part| part.to_string()).collect::<Vec<String>>().join("");
     }
-    pub fn push(&mut self, ch : char) {
-        self.parts.push(ColouredStringPart::String(ch.to_string()));
+
+    fn push_piece(&mut self, piece : ColouredStringPart) {
+        self.parts.push(piece);
     }
+
+    pub fn push(&mut self, string : ColouredString) {
+        self.push_piece(ColouredStringPart::Sub(Box::new(string)));
+    }
+
+    /// Append an unformatted `String` to the end of this `ColouredString`.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut s = fg::red("foo");
+    /// s.push_string(String::from("bar"));
+    /// assert_eq(s.to_string(), "foobar");
+    /// ```
+    pub fn push_string<S : Into<String>>(&mut self, string : S) {
+        self.push_piece(ColouredStringPart::String(string.into()));
+    }
+
+    /// Append an unformatted `char` to the end of this `ColouredString`.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut c = fg::red("foo");
+    /// c.push_char('b');
+    /// assert_eq(c.to_string(), "foob");
+    /// ```
+    pub fn push_char(&mut self, ch : char) {
+        self.push_string(ch.to_string());
+    }
+
     // TODO : truncate
+
     // TODO : pop
+
     // TODO : remove
+
     // TODO : remove_matches
+
     // TODO : retain
-    // TODO : insert
-    
+
+    fn insert_piece(&mut self, mut idx : usize, piece : ColouredStringPart) {
+        assert!(idx <= self.len(), "Byte index out of bounds.");
+        for p in 0..self.parts.len() {
+            let part = &mut self.parts[p];
+            if (idx == 0) {
+                self.parts.insert(p, piece);
+                return;
+            } else if (idx < part.len()) {
+                part.insert_piece(idx, piece);
+                return;
+            } else {
+                idx -= part.len();
+            }
+        }
+    }
+
+    pub fn insert(&mut self, idx : usize, string : ColouredString) {
+        self.insert_piece(idx, ColouredStringPart::Sub(Box::new(string)));
+    }
+
+    pub fn insert_string<S : Into<String>>(&mut self, idx : usize, string : S) {
+        self.insert_piece(idx, ColouredStringPart::String(string.into()));
+    }
+
+    pub fn insert_char(&mut self, idx : usize, ch : char) {
+        self.insert_string(idx, ch.to_string());
+    }
+
     /// Returns the sum of the lengths of each part.
-    /// This uses the `String.len` method, so it
+    /// This uses the [String::len] method, so it
     /// might not be what a human considers the
     /// length of the string.
     /// 
     /// # Examples
     /// 
     /// ```
-        use colourful::fg;
-        let a = fg::red("foo");
-        assert_eq!(3, a.len());
+    /// use colourful::fg;
+    /// let a = fg::red("foo");
+    /// assert_eq!(3, a.len());
     /// ```
     pub fn len(&self) -> usize {
         return self.parts.iter().map(|part| part.len()).sum();
     }
+
     /// Returns `true` is this `ColouredString` has a length of zero, and `false` otherwise.
     /// 
     /// # Examples
@@ -105,6 +173,7 @@ impl ColouredString {
     pub fn is_empty(&self) -> bool {
         return self.len() == 0;
     }
+
     /// Remove all characters and formatting from this `ColouredString`.
     ///
     /// # Examples
@@ -122,8 +191,11 @@ impl ColouredString {
         self.parts.clear();
         self.formatting.clear();
     }
+
     // TODO : drain
+
     // TODO : replace_range
+
 }
 
 impl Display for ColouredString {
@@ -146,19 +218,37 @@ pub(crate) enum ColouredStringPart {
     String(String),
     Sub(Box<ColouredString>)
 }
+
 impl ColouredStringPart {
-    pub fn to_string(&self) -> String {
+
+    fn to_string(&self) -> String {
         return match (self) {
             ColouredStringPart::String (string) => String::from(string),
-            ColouredStringPart::Sub    (string) => string.to_string()
+            ColouredStringPart::Sub    (string) => (*string).to_string()
         };
     }
-    pub fn len(&self) -> usize {
+
+    fn insert_piece(&mut self, idx : usize, piece : ColouredStringPart) {
+        match (self) {
+            ColouredStringPart::String(string) => {
+                assert!(idx <= string.len(), "Byte index out of bounds.");
+                let mut coloured_string = ColouredString::new();
+                coloured_string.push_string(string[..idx].to_string());
+                coloured_string.push_piece(piece);
+                coloured_string.push_string(string[idx..].to_string());
+                *self = ColouredStringPart::Sub(Box::new(coloured_string));
+            },
+            ColouredStringPart::Sub(string) => string.insert_piece(idx, piece)
+        }
+    }
+
+    fn len(&self) -> usize {
         return match (self) {
             ColouredStringPart::String (string) => string.len(),
             ColouredStringPart::Sub    (string) => string.len()
         };
     }
+
 }
 
 impl Display for ColouredStringPart {
