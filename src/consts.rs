@@ -11,9 +11,11 @@ const FORMAT_SUFFIX : &'static str = "m";
 pub(crate) const FORMAT_RESET : &'static str = "\x1b[0m";
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Formatting {
 
+    None,
+    
     Bold,
     Faint,
     Italic,
@@ -84,6 +86,8 @@ impl Formatting {
     pub fn get_code(&self) -> String {
         match (self) {
 
+            Formatting::None            => String::from("0"),
+            
             Formatting::Bold            => String::from("1"),
             Formatting::Faint           => String::from("2"),
             Formatting::Italic          => String::from("3"),

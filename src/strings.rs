@@ -33,7 +33,7 @@ use crate::consts::{
 ///
 /// Disable feature `us` to use `ColouredString` name.
 /// Enable feature `us` to use `ColoredString` alias.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ColouredString {
     pub(crate) parts      : Vec<ColouredStringPart>,
     pub(crate) formatting : Vec<Formatting>
@@ -67,14 +67,36 @@ impl ColouredString {
 /// Mutation and Getters
 impl ColouredString {
 
-    pub fn to_string(&self) -> String {
-        return self.parts.iter().map(|part| part.to_string()).collect::<Vec<String>>().join("");
+    /// TODO
+    pub fn unformat(&self) -> String {
+        return self.parts.iter().map(|part| part.unformat()).collect::<Vec<String>>().join("");
+    }
+    
+    /// TODO
+    fn format_next(&self, prefix : &Vec<String>) -> String {
+        let mut result = String::new();
+        let mut next_prefix = prefix.clone();
+        next_prefix.append(&mut self.formatting.iter().map(|f| format!("{}", f)).collect::<Vec<String>>());
+        for part in &self.parts {
+            result += part.format_next(&next_prefix).as_str();
+        }
+        return result;
     }
 
+    /// TODO
+    pub fn format(&self) -> String {
+        return self.format_next(&Vec::new());
+    }
+
+    /// TODO
     fn push_piece(&mut self, piece : ColouredStringPart) {
-        self.parts.push(piece);
+        let mut result = ColouredString::new();
+        result.parts.push(ColouredStringPart::Sub(Box::new(self.clone())));
+        result.parts.push(piece);
+        *self = result;
     }
 
+    /// TODO
     pub fn push(&mut self, string : ColouredString) {
         self.push_piece(ColouredStringPart::Sub(Box::new(string)));
     }
@@ -86,7 +108,7 @@ impl ColouredString {
     /// ```
     /// let mut s = fg::red("foo");
     /// s.push_string(String::from("bar"));
-    /// assert_eq(s.to_string(), "foobar");
+    /// assert_eq(s.unformat(), "foobar");
     /// ```
     pub fn push_string<S : Into<String>>(&mut self, string : S) {
         self.push_piece(ColouredStringPart::String(string.into()));
@@ -99,10 +121,31 @@ impl ColouredString {
     /// ```
     /// let mut c = fg::red("foo");
     /// c.push_char('b');
-    /// assert_eq(c.to_string(), "foob");
+    /// assert_eq(c.unformat(), "foob");
     /// ```
     pub fn push_char(&mut self, ch : char) {
-        self.push_string(ch.to_string());
+        self.push_string(ch);
+    }
+
+    /// TODO
+    fn split_at(&mut self, mut idx : usize) -> [ColouredString; 2] {
+        let mut left  = Vec::new();
+        let mut right = Vec::new();
+        for p in 0..self.parts.len() {
+            let part = &mut self.parts[p];
+            if (idx == 0) {
+                // TODO : 
+            } else if (idx < part.len()) {
+                // TODO : split the part.
+            } else {
+                idx -= part.len();
+            }
+        }
+        let mut left_string = ColouredString::new();
+        left_string.parts = left;
+        let mut right_string = ColouredString::new();
+        right_string.parts = right;
+        return [left_string, right_string];
     }
 
     // TODO : truncate
@@ -115,30 +158,28 @@ impl ColouredString {
 
     // TODO : retain
 
+    /// TODO
     fn insert_piece(&mut self, mut idx : usize, piece : ColouredStringPart) {
         assert!(idx <= self.len(), "Byte index out of bounds.");
-        for p in 0..self.parts.len() {
-            let part = &mut self.parts[p];
-            if (idx == 0) {
-                self.parts.insert(p, piece);
-                return;
-            } else if (idx < part.len()) {
-                part.insert_piece(idx, piece);
-                return;
-            } else {
-                idx -= part.len();
-            }
-        }
+        let [left, right] = self.split_at(idx);
+        let result        = ColouredString::new();
+        result.parts.push(ColouredStringPart::Sub(Box::new(left)));
+        result.parts.push(piece);
+        result.parts.push(ColouredStringPart::Sub(Box::new(right)));
+        *self = result;
     }
 
+    /// TODO
     pub fn insert(&mut self, idx : usize, string : ColouredString) {
         self.insert_piece(idx, ColouredStringPart::Sub(Box::new(string)));
     }
 
+    /// TODO
     pub fn insert_string<S : Into<String>>(&mut self, idx : usize, string : S) {
         self.insert_piece(idx, ColouredStringPart::String(string.into()));
     }
 
+    /// TODO
     pub fn insert_char(&mut self, idx : usize, ch : char) {
         self.insert_string(idx, ch.to_string());
     }
@@ -198,36 +239,48 @@ impl ColouredString {
 
 }
 
+/// TODO
 impl Display for ColouredString {
     fn fmt(&self, f : &mut Formatter<'_>) -> Result {
-        let mut text = String::new();
-        for part in &self.parts {
-            text += format!("{}{}{}",
-                self.formatting.iter().map(|f| format!("{}", f)).collect::<Vec<String>>().join(""),
-                part,
-                FORMAT_RESET
-            ).as_str();
-        }
-        return write!(f, "{}", text);
+        return write!(f, "{}", self.format());
     }
 }
 
 
-#[derive(Debug)]
+/// TODO
+#[derive(Debug, Clone)]
 pub(crate) enum ColouredStringPart {
+    /// TODO
     String(String),
+    /// TODO
     Sub(Box<ColouredString>)
 }
 
+/// TODO
 impl ColouredStringPart {
 
-    fn to_string(&self) -> String {
+    /// TODO
+    fn unformat(&self) -> String {
         return match (self) {
             ColouredStringPart::String (string) => String::from(string),
-            ColouredStringPart::Sub    (string) => (*string).to_string()
+            ColouredStringPart::Sub    (string) => (*string).unformat()
         };
     }
 
+    /// TODO
+    fn format_next(&self, prefix : &Vec<String>) -> String {
+        return match (self) {
+            ColouredStringPart::String(string) => format!(
+                "{}{}{}",
+                prefix.join(""),
+                string,
+                FORMAT_RESET
+            ),
+            ColouredStringPart::Sub(string) => string.format_next(prefix)
+        };
+    }
+
+    /// TODO
     fn insert_piece(&mut self, idx : usize, piece : ColouredStringPart) {
         match (self) {
             ColouredStringPart::String(string) => {
@@ -242,6 +295,7 @@ impl ColouredStringPart {
         }
     }
 
+    /// TODO
     fn len(&self) -> usize {
         return match (self) {
             ColouredStringPart::String (string) => string.len(),
@@ -249,13 +303,4 @@ impl ColouredStringPart {
         };
     }
 
-}
-
-impl Display for ColouredStringPart {
-    fn fmt(&self, f : &mut Formatter<'_>) -> Result {
-        return write!(f, "{}", match (self) {
-            ColouredStringPart::String (string) => String::from(string),
-            ColouredStringPart::Sub    (string) => format!("{}", string)
-        });
-    }
 }

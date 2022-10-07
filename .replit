@@ -1,5 +1,5 @@
-run = ["cargo", "run"]
-hidden = ["target"]
+run = ["sh", "./replit.sh"]
+hidden = ["target", ".git", "target", ".gitignore", ".replit", "replit.nix", "Cargo.lock"]
 
 entrypoint = "src/main.rs"
 

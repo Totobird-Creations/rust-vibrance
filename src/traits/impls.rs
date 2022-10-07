@@ -48,7 +48,7 @@ impl Add<ColouredString> for String {
 }
 impl Into<String> for ColouredString {
     fn into(self) -> String {
-        return self.parts.iter().map(|part| part.to_string()).collect::<Vec<String>>().join("");
+        return self.unformat();
     }
 }
 impl From<String> for ColouredString {
