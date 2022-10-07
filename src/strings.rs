@@ -22,8 +22,8 @@ use crate::consts::{
 ///
 /// Direct usage.
 /// ```
-/// use coloured::ColouredString;
-/// use coloured::consts::Formatting;
+/// use vibrance::ColouredString;
+/// use vibrance::consts::Formatting;
 /// let a = ColouredString::new();
 /// let b = ColouredString::from("foo");
 /// let c = ColouredString::from_formatting("bar", Formatting::FgRed);
@@ -31,7 +31,7 @@ use crate::consts::{
 ///
 /// Shorthand usage.
 /// ```
-/// use coloured::fg;
+/// use vibrance::fg;
 /// let a = fg::red("bar");
 /// ```
 ///
@@ -48,6 +48,14 @@ pub struct ColouredString {
 /// Initialisation
 impl ColouredString {
     /// Create a new empty, unformatted, `ColouredString`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vibrance::ColouredString;
+    /// let m = ColouredString::new();
+    /// assert_eq!(m.unformat(), String::new());
+    /// ```
     pub fn new() -> ColouredString {
         return ColouredString {
             parts      : Vec::new(),
@@ -55,10 +63,18 @@ impl ColouredString {
         };
     }
     /// Create a new unformatted `ColouredString` containing some text.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vibrance::ColouredString;
+    /// let f = ColouredString::from("foo");
+    /// assert_eq!(f.unformat(), String::from("format"));
+    /// ```
     pub fn from<S : Into<String>>(text : S) -> ColouredString {
         return ColouredString::from_part(ColouredStringPart::String(text.into()));
     }
-    /// TODO
+    /// Creates a new `ColouredString` contining a single part.
     pub(crate) fn from_part(part : ColouredStringPart) -> ColouredString {
         return ColouredString {
             parts      : vec![part],
@@ -77,7 +93,15 @@ impl ColouredString {
 /// Mutation and Getters
 impl ColouredString {
 
-    /// TODO
+    /// Create an unformatted string from the parts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vibrance::fg;
+    /// let u = fg::red("foo");
+    /// assert_eq!(u, String::from("foo"));
+    /// ```
     pub fn unformat(&self) -> String {
         return self.parts.iter().map(|part| part.unformat()).collect::<Vec<String>>().join("");
     }
