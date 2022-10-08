@@ -1,3 +1,17 @@
+//! Text colourisation library.
+//!
+//! # Features
+//! 
+//! * `us` - Adds the United States spelling of the names.
+//! 
+//! # Examples
+//! 
+//! ```
+//! use vibrance::{fg, bg, style};
+//! println!("{}", fg::red("red " + style::bold("bold")));
+//! ```
+
+
 #![allow(unused_parens)]
 
 
@@ -7,7 +21,8 @@ pub use traits::Colourisable;
 #[cfg(feature = "us")]
 pub use traits::Colourisable as Colorizable;
 
-pub mod consts;
+mod consts;
+pub use consts::Formatting;
 
 mod strings;
 #[cfg(not(feature = "us"))]

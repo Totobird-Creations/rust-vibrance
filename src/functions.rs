@@ -5,11 +5,14 @@ use crate::{
 };
 
 
+/// Generates a function which takes in a `Colourisable`
+/// and returns a formatted string.
 macro_rules! function {
     ($name:ident,$value:expr) => {
         function!($name(), $value);
     };
     ($name:ident($($arg_name:ident:$arg_type:ty),*),$value:expr) => {
+        /// A formatting function.
         pub fn $name<S : Colourisable>(from : S, $($arg_name:$arg_type),*) -> ColouredString {
             from.formatted(vec!($value))
         }
@@ -17,6 +20,7 @@ macro_rules! function {
 }
 
 
+/// Text styling functions.
 pub mod style {
     use super::*;
     function!(bold          , Formatting::Bold          );
@@ -29,6 +33,7 @@ pub mod style {
     function!(conceal       , Formatting::Conceal       );
     function!(strikethrough , Formatting::Strikethrough );
     function!(overline      , Formatting::Overline      );
+    /// Text styling removal functions.
     pub mod reset {
         use super::*;
         function!(intensity     , Formatting::ResetIntensity     );
@@ -42,6 +47,7 @@ pub mod style {
         function!(overline      , Formatting::ResetOverline      );
     }
 }
+/// Text foreground setting functions.
 pub mod fg {
     use super::*;
     function!(black                   , Formatting::FgBlack         );
@@ -64,6 +70,7 @@ pub mod fg {
     function!(cbit_24(r:u8,g:u8,b:u8) , Formatting::Fg24Bit(r,g,b)  );
     function!(reset                   , Formatting::FgReset         );
 }
+/// Text background setting functions.
 pub mod bg {
     use super::*;
     function!(black                   , Formatting::BgBlack         );

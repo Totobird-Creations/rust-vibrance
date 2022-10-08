@@ -1,4 +1,4 @@
-use colourful::{fg, bg, style};
+use vibrance::{fg, bg, style};
 
 
 fn main() {

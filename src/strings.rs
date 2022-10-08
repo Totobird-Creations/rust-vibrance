@@ -16,29 +16,31 @@ use crate::consts::{
 };
 
 
-/// An object representing pieces of text and formatting for each part.
+/// An object representing pieces of text and
+/// formatting for each part.
 ///
 /// # Examples
 ///
 /// Direct usage.
 /// ```
 /// use vibrance::ColouredString;
-/// use vibrance::consts::Formatting;
 /// let a = ColouredString::new();
 /// let b = ColouredString::from("foo");
-/// let c = ColouredString::from_formatting("bar", Formatting::FgRed);
 /// ```
 ///
 /// Shorthand usage.
 /// ```
-/// use vibrance::fg;
-/// let a = fg::red("bar");
+/// use vibrance::{fg, bg, style};
+/// let a = fg::red("foo");
+/// let b = bg::green("bar" + style::bold("baz"));
 /// ```
 ///
 /// # Aliases
 ///
-/// Disable feature `us` to use `ColouredString` name.
-/// Enable feature `us` to use `ColoredString` alias.
+/// Disable the `us` feature to use `ColouredString` name.
+/// This is used by default.
+/// 
+/// Enable the `us` feature to use `ColoredString` alias.
 #[derive(Debug, Clone)]
 pub struct ColouredString {
     pub(crate) parts      : Vec<ColouredStringPart>,
@@ -54,7 +56,7 @@ impl ColouredString {
     /// ```
     /// use vibrance::ColouredString;
     /// let m = ColouredString::new();
-    /// assert_eq!(m.unformat(), String::new());
+    /// assert_eq!(m.unformat(), "");
     /// ```
     pub fn new() -> ColouredString {
         return ColouredString {
@@ -64,17 +66,23 @@ impl ColouredString {
     }
     /// Create a new unformatted `ColouredString` containing some text.
     ///
+    /// # Arguments
+    /// 
+    /// * `text` - Any object that can be converted into a `String`.
+    /// 
     /// # Examples
     ///
     /// ```
     /// use vibrance::ColouredString;
     /// let f = ColouredString::from("foo");
-    /// assert_eq!(f.unformat(), String::from("format"));
+    /// assert_eq!(f.unformat(), String::from("foo"));
     /// ```
     pub fn from<S : Into<String>>(text : S) -> ColouredString {
         return ColouredString::from_part(ColouredStringPart::String(text.into()));
     }
     /// Creates a new `ColouredString` contining a single part.
+    /// 
+    /// # Internal
     pub(crate) fn from_part(part : ColouredStringPart) -> ColouredString {
         return ColouredString {
             parts      : vec![part],
@@ -82,7 +90,9 @@ impl ColouredString {
         };
     }
     /// Create a new `ColouredString` containing some text and formatting.
-    pub(crate) fn from_formatting<S : Into<String>>(text : S, formatting : Vec<Formatting>) -> ColouredString {
+    /// 
+    /// Commonly used by implementations of `Colourisable`.
+    pub fn from_formatting<S : Into<String>>(text : S, formatting : Vec<Formatting>) -> ColouredString {
         return ColouredString {
             parts      : vec![ColouredStringPart::String(text.into())],
             formatting : formatting
@@ -94,19 +104,33 @@ impl ColouredString {
 impl ColouredString {
 
     /// Create an unformatted string from the parts.
+    /// The resulting string will not contain any 
+    /// escape codes. If you want one that has the
+    /// codes, see [ColouredString::unformat] or use
+    /// `format!`.
     ///
     /// # Examples
     ///
     /// ```
     /// use vibrance::fg;
     /// let u = fg::red("foo");
-    /// assert_eq!(u, String::from("foo"));
+    /// assert_eq!(u.unformat(), "foo");
     /// ```
+    /// 
+    /// # Aliases
+    /// 
+    /// [ColouredString::deformat].
     pub fn unformat(&self) -> String {
         return self.parts.iter().map(|part| part.unformat()).collect::<Vec<String>>().join("");
     }
-    
-    /// TODO
+
+    /// Alias to [ColouredString::unformat].
+    pub fn deformat(&self) -> String {
+        return self.unformat();
+    }
+
+
+    /// Format the parts with the formatting and given prefix.
     fn format_next(&self, prefix : &Vec<String>) -> String {
         let mut result = String::new();
         let mut next_prefix = prefix.clone();
@@ -117,13 +141,18 @@ impl ColouredString {
         return result;
     }
 
-    /// TODO
+    /// Create a formatted string from the parts.
+    /// The resulting string will contain several escape
+    /// codes. If you want one that doesn't have the
+    /// codes, see [ColouredString::unformat].
     pub fn format(&self) -> String {
         return self.format_next(&Vec::new());
     }
 
 
-    /// TODO
+    /// Append a `ColouredStringPart` to the end of this `ColouredString`.
+    /// 
+    /// # Internal
     fn push_piece(&mut self, piece : ColouredStringPart) {
         let mut result = ColouredString::new();
         result.parts.push(ColouredStringPart::Sub(Box::new(self.clone())));
@@ -136,19 +165,22 @@ impl ColouredString {
     /// # Examples
     /// 
     /// ```
-    /// use colourful::fg;
+    /// use vibrance::fg;
     /// let mut s = fg::red("foo");
     /// s.push(String::from("bar"));
     /// s.push("baz");
     /// s.push(fg::red("foo"));
-    /// assert_eq(s.unformat(), "foobarbazfoo");
+    /// assert_eq!(s.unformat(), "foobarbazfoo");
     /// ```
     pub fn push<S : Into<ColouredString>>(&mut self, string : S) {
         self.push_piece(ColouredStringPart::Sub(Box::new(string.into())));
     }
 
 
-    /// TODO
+    /// Splits this `ColouredString` into two parts
+    /// at the given index.
+    /// 
+    /// # Internal
     fn split_2(&self, mut idx : usize) -> [ColouredString; 2] {
         assert!(idx <= self.len(), "Byte index out of bounds.");
         let mut left     = Vec::new();
@@ -161,7 +193,7 @@ impl ColouredString {
                     right.push(part.clone());
                 } else if (idx < part.len()) {
                     is_right = true;
-                    let [part_left, part_right] = part.split_at(idx);
+                    let [part_left, part_right] = part.split_2(idx);
                     left.push(ColouredStringPart::Sub(Box::new(part_left)));
                     right.push(ColouredStringPart::Sub(Box::new(part_right)));
                 } else {
@@ -181,7 +213,10 @@ impl ColouredString {
         return [left_string, right_string];
     }
 
-    /// TODO
+    /// Splits this `ColouredString` into three parts
+    /// at the start and end of the given range.
+    /// 
+    /// # Internal
     fn split_3<R : RangeBounds<usize>>(&self, range : R) -> [ColouredString; 3] {
         let start = match range.start_bound() {
             Bound::Included(&n) => n,
@@ -206,7 +241,7 @@ impl ColouredString {
     /// # Examples
     /// 
     /// ```
-    /// use colourful::fg;
+    /// use vibrance::fg;
     /// let mut s = fg::red("foo");
     /// 
     /// s.clear();
@@ -219,13 +254,52 @@ impl ColouredString {
         self.formatting.clear();
     }
 
-    /// TODO
+    /// Returns a `ColouredString` of the text within
+    /// the given range with formatting.
+    /// 
+    /// # Arguments
+    /// 
+    /// * range : A `RangeBounds<usize>` which specifies the start and end of the range to get.
+    /// 
+    /// # Panics
+    /// 
+    /// * The end of the range is greater than the length of this `ColouredString`.
+    /// * The start of the range is greater than the end.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut r = fg::red("red" + fg::green("green")) + "none" + fg::yellow("yellow");
+    /// assert_eq!(r.unformat(), "redgreennoneyellow");
+    /// assert_eq!(r.get_range(5..14).unformat(), "eennoneye");
+    /// ```
     pub fn get_range<R : RangeBounds<usize>>(&mut self, range : R) -> ColouredString {
         let [_, center, _] = self.split_3(range);
         return center;
     }
 
-    /// TODO
+    /// Removes text within the given range.
+    /// Returns the removed text with formatting.
+    /// 
+    /// # Arguments
+    /// 
+    /// * range : A `RangeBounds<usize>` which specifies the start and end of the range to remove.
+    /// 
+    /// # Panics
+    /// 
+    /// * The end of the range is greater than the length of this `ColouredString`.
+    /// * The start of the range is greater than the end.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut r = fg::red("red" + fg::green("green")) + "none" + fg::yellow("yellow");
+    /// assert_eq!(r.unformat(), "redgreennoneyellow");
+    /// assert_eq!(r.remove_range(5..14).unformat(), "eennoneye");
+    /// assert_eq!(r.unformat(), "redgrllow");
+    /// ```
     pub fn remove_range<R : RangeBounds<usize>>(&mut self, range : R) -> ColouredString {
         let [left, center, right] = self.split_3(range);
         self.parts.clear();
@@ -234,7 +308,28 @@ impl ColouredString {
         return center;
     }
 
-    /// TODO
+    /// Replaced text within the given range
+    /// with other text.
+    /// Returns the replaced text with formatting.
+    /// 
+    /// # Arguments
+    /// 
+    /// * range : A `RangeBounds<usize>` which specifies the start and end of the range to replace.
+    /// 
+    /// # Panics
+    /// 
+    /// * The end of the range is greater than the length of this `ColouredString`.
+    /// * The start of the range is greater than the end.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut r = fg::red("red" + fg::green("green")) + "none" + fg::yellow("yellow");
+    /// assert_eq!(r.unformat(), "redgreennoneyellow");
+    /// assert_eq!(r.replace_range(5..14, "replaced").unformat(), "eennoneye");
+    /// assert_eq!(r.unformat(), "redgrreplacedllow");
+    /// ```
     pub fn replace_range<R : RangeBounds<usize>, S : Into<ColouredString>>(&mut self, range : R, replace_with : S) -> ColouredString {
         let [left, center, right] = self.split_3(range);
         self.parts.clear();
@@ -244,15 +339,31 @@ impl ColouredString {
         return center;
     }
 
-    /// TODO
-    pub fn truncate(&mut self, idx : usize) {
-        let     [left, _] = self.split_2(idx);
+    /// Shortens this `ColouredString` to the specified length.
+    /// 
+    /// # Arguments
+    /// 
+    /// * length : The maximum length of the new `ColouredString`.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut t = fg::red("red" + fg::green("green")) + "none" + fg::yellow("yellow");
+    /// assert_eq!(t.unformat(), "redgreennoneyellow");
+    /// t.truncate(7);
+    /// assert_eq!(t.unformat(), "redgree");
+    /// ```
+    pub fn truncate(&mut self, length : usize) {
+        let     [left, _] = self.split_2(length);
         let mut result    = ColouredString::new();
         result.parts.push(ColouredStringPart::Sub(Box::new(left)));
         *self = result;
     }
 
-    /// TODO
+    /// Inserts a `ColouredStringPart` at the given index.
+    /// 
+    /// # Internal
     fn insert_piece(&mut self, idx : usize, piece : ColouredStringPart) {
         let     [left, right] = self.split_2(idx);
         let mut result        = ColouredString::new();
@@ -262,9 +373,27 @@ impl ColouredString {
         *self = result;
     }
 
-    /// TODO
-    pub fn insert<S : Into<ColouredString>>(&mut self, idx : usize, string : S) {
-        self.insert_piece(idx, ColouredStringPart::Sub(Box::new(string.into())));
+    /// Inserts text at the given index.
+    /// 
+    /// # Arguments
+    /// 
+    /// * index : A usize which specifies the position at which to insert.
+    /// 
+    /// # Panics
+    /// 
+    /// * The index is greater than the length of this `ColouredString`.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut i = fg::red("red" + fg::green("green")) + "none" + fg::yellow("yellow");
+    /// assert_eq!(i.unformat(), "redgreennoneyellow");
+    /// i.insert(13, "insertion");
+    /// assert_eq!(i.unformat(), "redgreennoneyinsertionellow");
+    /// ```
+    pub fn insert<S : Into<ColouredString>>(&mut self, index : usize, string : S) {
+        self.insert_piece(index, ColouredStringPart::Sub(Box::new(string.into())));
     }
     
     /// Returns the sum of the lengths of each part.
@@ -275,7 +404,7 @@ impl ColouredString {
     /// # Examples
     /// 
     /// ```
-    /// use colourful::fg;
+    /// use vibrance::fg;
     /// let a = fg::red("foo");
     /// assert_eq!(3, a.len());
     /// ```
@@ -283,12 +412,14 @@ impl ColouredString {
         return self.parts.iter().map(|part| part.len()).sum();
     }
 
-    /// Returns `true` is this `ColouredString` has a length of zero, and `false` otherwise.
+    /// Returns `true` is this `ColouredString` has a
+    /// length of zero, and `false` otherwise.
     /// 
     /// # Examples
     /// 
     /// ```
-    /// let v = ColouredString::new();
+    /// use vibrance::ColouredString;
+    /// let mut v = ColouredString::new();
     /// assert!(v.is_empty());
     /// 
     /// v.push('a');
@@ -298,7 +429,19 @@ impl ColouredString {
         return self.len() == 0;
     }
 
-    /// TODO
+    /// Removes that last character from this `ColouredString`
+    /// and returns it.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use vibrance::fg;
+    /// let mut p = fg::red("red") + fg::blue("blue");
+    /// assert_eq!(p.unformat(), "redblue");
+    /// 
+    /// assert_eq!(p.pop().unformat(), "e");
+    /// assert_eq!(p.unformat(), "redblu");
+    /// ```
     pub fn pop(&mut self) -> ColouredString {
         return self.remove_range(self.len() - 1 .. self.len());
     }
@@ -313,7 +456,7 @@ impl Display for ColouredString {
 }
 
 
-/// TODO
+/// A fragment of a `ColouredString`.
 #[derive(Debug, Clone)]
 pub(crate) enum ColouredStringPart {
     /// A string.
@@ -322,10 +465,10 @@ pub(crate) enum ColouredStringPart {
     Sub(Box<ColouredString>)
 }
 
-/// TODO
+/// `ColouredString` helpers.
 impl ColouredStringPart {
 
-    /// TODO
+    /// See [ColouredString::unformat].
     fn unformat(&self) -> String {
         return match (self) {
             ColouredStringPart::String (string) => String::from(string),
@@ -333,7 +476,7 @@ impl ColouredStringPart {
         };
     }
 
-    /// TODO
+    /// See [ColouredString::format].
     fn format_next(&self, prefix : &Vec<String>) -> String {
         return match (self) {
             ColouredStringPart::String(string) => format!(
@@ -345,8 +488,9 @@ impl ColouredStringPart {
             ColouredStringPart::Sub(string) => string.format_next(prefix)
         };
     }
-    /// TODO
-    fn split_at(&self, idx : usize) -> [ColouredString; 2] {
+
+    /// See [ColouredString::split_2].
+    fn split_2(&self, idx : usize) -> [ColouredString; 2] {
         match (self) {
             ColouredStringPart::String(string) => {
                 return [ColouredString::from(&string[..idx]), ColouredString::from(&string[idx..])]
@@ -355,7 +499,7 @@ impl ColouredStringPart {
         }
     }
 
-    /// TODO
+    /// See [ColouredString::len].
     fn len(&self) -> usize {
         return match (self) {
             ColouredStringPart::String (string) => string.len(),

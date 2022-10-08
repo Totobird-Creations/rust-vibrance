@@ -62,6 +62,28 @@ impl From<String> for ColouredString {
     }
 }
 
+impl Colourisable for char {
+    fn formatted(self, formatting : Vec<Formatting>) -> ColouredString {
+        return ColouredString::from_formatting(self, formatting);
+    }
+}
+impl Add<ColouredString> for char {
+    type Output = ColouredString;
+    fn add(self, other : ColouredString) -> Self::Output {
+        let mut string = ColouredString::new();
+        string.parts   = vec![
+            ColouredStringPart::String(self.to_string()),
+            ColouredStringPart::Sub(Box::new(other.formatted(Vec::new())))
+        ];
+        return string;
+    }
+}
+impl From<char> for ColouredString {
+    fn from(ch : char) -> Self {
+        return ch.formatted(Vec::new());
+    }
+}
+
 impl Colourisable for ColouredString {
     fn formatted(mut self, mut formatting : Vec<Formatting>) -> ColouredString {
         formatting.append(&mut self.formatting);

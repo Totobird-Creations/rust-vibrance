@@ -5,12 +5,16 @@ use std::fmt::{
 };
 
 
+/// The format code prefix.
 const FORMAT_PREFIX : &'static str = "\x1b[";
+/// The format code suffix.
 const FORMAT_SUFFIX : &'static str = "m";
 
+/// The reset format code.
 pub(crate) const FORMAT_RESET : &'static str = "\x1b[0m";
 
 
+/// An enum of constants representing the different formatting codes.
 #[derive(Debug, Clone)]
 pub enum Formatting {
 
@@ -82,7 +86,9 @@ pub enum Formatting {
 
 }
 
+/// Getters
 impl Formatting {
+    /// Return the ANSI code of the formatting variant.
     pub fn get_code(&self) -> String {
         match (self) {
 
@@ -154,6 +160,7 @@ impl Formatting {
     }
 }
 
+/// Display
 impl Display for Formatting {
     fn fmt(&self, f : &mut Formatter<'_>) -> Result {
         return write!(f, "{}{}{}",

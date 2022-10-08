@@ -1,4 +1,5 @@
-use colourful::fg;
+use vibrance::fg;
+
 
 fn main() {
     let mut a = fg::red("red");
